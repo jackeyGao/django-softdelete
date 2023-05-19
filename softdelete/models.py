@@ -140,8 +140,7 @@ class SoftDeleteManager(models.Manager):
 
 class SoftDeleteObject(models.Model):
     deleted_at = models.BigIntegerField(
-        blank=True, null=True, default=0,
-        editable=False, db_index=True
+        default=0, editable=False, db_index=True
     )
     objects = SoftDeleteManager()
 
@@ -240,7 +239,7 @@ class SoftDeleteObject(models.Model):
                 changeset=cs,
                 content_type=ContentType.objects.get_for_model(self),
                 object_id=self.pk)
-            self.deleted_at = int(tz.utcnow().timestamp() * 1000)
+            self.deleted_at = int(timezone.now().timestamp() * 1000)
             self.save()
             all_related = [
                 f for f in self._meta.get_fields()
