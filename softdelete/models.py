@@ -95,14 +95,14 @@ class SoftDeleteManager(models.Manager):
 
     def get_query_set(self):
         qs = super(SoftDeleteManager, self).get_query_set().filter(
-            deleted_at__isnull=True)
+            deleted_at=0)
         if not issubclass(qs.__class__, SoftDeleteQuerySet):
             qs.__class__ = SoftDeleteQuerySet
         return qs
 
     def get_queryset(self):
         qs = super(SoftDeleteManager, self).get_queryset().filter(
-            deleted_at__isnull=True)
+            deleted_at=0)
         if not issubclass(qs.__class__, SoftDeleteQuerySet):
             qs.__class__ = SoftDeleteQuerySet
         return qs
@@ -117,7 +117,7 @@ class SoftDeleteManager(models.Manager):
         return qs
 
     def deleted_set(self):
-        qs = self._get_base_queryset().filter(deleted_at__isnull=False)
+        qs = self._get_base_queryset().filter(deleted_at__gt=0)
         if not issubclass(qs.__class__, SoftDeleteQuerySet):
             qs.__class__ = SoftDeleteQuerySet
         return qs
@@ -139,8 +139,8 @@ class SoftDeleteManager(models.Manager):
 
 
 class SoftDeleteObject(models.Model):
-    deleted_at = models.DateTimeField(
-        blank=True, null=True, default=None,
+    deleted_at = models.BigIntegerField(
+        blank=True, null=True, default=0,
         editable=False, db_index=True
     )
     objects = SoftDeleteManager()
@@ -156,16 +156,16 @@ class SoftDeleteObject(models.Model):
         self.__dirty = False
 
     def get_deleted(self):
-        return self.deleted_at is not None
+        return self.deleted_at != 0
 
     def set_deleted(self, d):
         """Called via the admin interface (if user checks the "deleted" checkox)"""
         if d and not self.deleted_at:
             self.__dirty = True
-            self.deleted_at = timezone.now()
+            self.deleted_at = int(timezone.now().timestamp() * 1000)
         elif not d and self.deleted_at:
             self.__dirty = True
-            self.deleted_at = None
+            self.deleted_at = 0
 
     deleted = property(get_deleted, set_deleted)
 
@@ -240,7 +240,7 @@ class SoftDeleteObject(models.Model):
                 changeset=cs,
                 content_type=ContentType.objects.get_for_model(self),
                 object_id=self.pk)
-            self.deleted_at = timezone.now()
+            self.deleted_at = int(tz.utcnow().timestamp() * 1000)
             self.save()
             all_related = [
                 f for f in self._meta.get_fields()
@@ -274,7 +274,7 @@ class SoftDeleteObject(models.Model):
         pre_undelete.send(sender=self.__class__,
                           instance=self,
                           using=using)
-        self.deleted_at = None
+        self.deleted_at = 0
         self.save()
         post_undelete.send(sender=self.__class__,
                            instance=self,

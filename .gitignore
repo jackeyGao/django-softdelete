@@ -23,3 +23,5 @@ manage.py
 .tox
 .eggs
 
+build
+django_softdelete.egg-info
